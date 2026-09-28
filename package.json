@@ -1,0 +1,12 @@
+{
+  "name": "limos-anotados",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vista de solo lectura de anotados para almuerzo y cena (misma base Neon que Limos)",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}

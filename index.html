@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#ff6b35" />
+  <title>Anotados · Arboleda</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="anotados">
+    <header class="anotados-top">
+      <h1>🍽️ Anotados</h1>
+      <button type="button" id="refresh" class="anotados-refresh">Actualizar</button>
+    </header>
+
+    <nav class="anotados-nav">
+      <button type="button" id="prev" aria-label="Día anterior">‹</button>
+      <div class="anotados-fecha">
+        <strong id="fecha"></strong>
+        <span id="relativa"></span>
+      </div>
+      <button type="button" id="next" aria-label="Día siguiente">›</button>
+    </nav>
+
+    <div class="anotados-dias" id="dias"></div>
+
+    <p class="anotados-estado" id="estado"></p>
+    <div id="contenido"></div>
+  </main>
+  <script src="/clasificacion.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

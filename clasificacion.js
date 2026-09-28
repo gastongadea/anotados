@@ -1,0 +1,109 @@
+/* Clasificación de las opciones de comida que guarda Limos. */
+(function (global) {
+  function normalizarOpcion(raw) {
+    const v = String(raw == null ? '' : raw).trim().replace(/\s+/g, '');
+    if (!v) return '';
+    const upper = v.toUpperCase();
+    if (upper === 'SAN') return 'San';
+    if (upper === '12:30' || upper === '12.30') return '12:30';
+    if (['S', 'N', 'R', 'T', 'RT', 'V', 'VM', 'VRM', '12'].includes(upper)) return upper;
+    return v;
+  }
+
+  function esGrupo(iniciales) {
+    return iniciales === 'Invitados' || iniciales === 'Plan';
+  }
+
+  /** null si no cuenta (vacío, N o cantidad 0). */
+  function clasificarOpcion(opcion, iniciales) {
+    const o = normalizarOpcion(opcion);
+    if (!o || o === 'N') return null;
+
+    if (esGrupo(iniciales)) {
+      if (!/^\d+$/.test(o)) return null;
+      const cantidad = parseInt(o, 10);
+      if (!cantidad) return null;
+      return { grupo: 'normal', regimen: false, cantidad };
+    }
+
+    const regimen = o === 'R' || o === 'RT' || o === 'VRM';
+    const grupos = {
+      S: 'normal', R: 'normal',
+      '12': '12', '12:30': '1230',
+      T: 'tarde', RT: 'tarde',
+      San: 'sandwich', V: 'vianda',
+      VM: 'viandaManana', VRM: 'viandaManana',
+    };
+    return { grupo: grupos[o] || 'otro', regimen, cantidad: 1, crudo: o };
+  }
+
+  const GRUPOS = {
+    normal: { label: 'Horario normal', tipo: 'horario' },
+    '12': { label: '12:00', tipo: 'horario' },
+    '1230': { label: '12:30', tipo: 'horario' },
+    tarde: { label: 'Tarde', tipo: 'horario' },
+    sandwich: { label: 'Sandwich', tipo: 'formato' },
+    vianda: { label: 'Vianda', tipo: 'formato' },
+    viandaManana: { label: 'Vianda mañana', tipo: 'formato' },
+    otro: { label: 'Otro', tipo: 'otro' },
+  };
+
+  const VISIBLES = {
+    Almuerzo: {
+      horario: ['normal', '12', '1230', 'tarde'],
+      formato: ['sandwich', 'vianda'],
+    },
+    Cena: {
+      horario: ['normal', 'tarde'],
+      formato: ['sandwich', 'vianda', 'viandaManana'],
+    },
+  };
+
+  function resumirComida(filas, comida) {
+    const grupos = {};
+    Object.keys(GRUPOS).forEach((id) => {
+      grupos[id] = { id, label: GRUPOS[id].label, total: 0, personas: [] };
+    });
+    const regimen = { id: 'regimen', label: 'Régimen', total: 0, personas: [] };
+
+    filas.forEach((fila) => {
+      if (fila.comida !== comida) return;
+      const iniciales = String(fila.iniciales || '').trim();
+      if (!iniciales || iniciales.toLowerCase() === 'misa') return;
+      const c = clasificarOpcion(fila.opcion, iniciales);
+      if (!c) return;
+      const persona = {
+        iniciales,
+        cantidad: c.cantidad,
+        regimen: c.regimen,
+        crudo: c.crudo,
+      };
+      grupos[c.grupo].total += c.cantidad;
+      grupos[c.grupo].personas.push(persona);
+      if (c.regimen) {
+        regimen.total += c.cantidad;
+        regimen.personas.push(persona);
+      }
+    });
+
+    const porNombre = (a, b) => a.iniciales.localeCompare(b.iniciales, 'es');
+    Object.values(grupos).forEach((g) => g.personas.sort(porNombre));
+    regimen.personas.sort(porNombre);
+
+    const vis = VISIBLES[comida];
+    const conDatos = (tipo) =>
+      Object.keys(GRUPOS).filter(
+        (id) => GRUPOS[id].tipo === tipo && !vis[tipo].includes(id) && grupos[id].total > 0
+      );
+
+    const horarios = vis.horario.concat(conDatos('horario')).map((id) => grupos[id]);
+    const formatos = vis.formato.concat(conDatos('formato')).map((id) => grupos[id]);
+    const otro = grupos.otro.total > 0 ? grupos.otro : null;
+    const total = Object.values(grupos).reduce((s, g) => s + g.total, 0);
+
+    return { total, horarios, formatos, regimen, otro };
+  }
+
+  global.Clasificacion = { normalizarOpcion, clasificarOpcion, resumirComida };
+  if (typeof module !== 'undefined') module.exports = global.Clasificacion;
+})(typeof window !== 'undefined' ? window : globalThis);
