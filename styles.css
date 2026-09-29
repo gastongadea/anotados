@@ -151,44 +151,49 @@ button { font: inherit; cursor: pointer; }
 .anotados-grupo { margin-bottom: 10px; }
 
 .anotados-grupo > p {
-  margin: 0 0 6px;
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin: 10px 0 6px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--muted);
 }
 
-.anotados-chips {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+.anotados-filas,
+.anotados-detalle-cuerpo {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.anotados-chip {
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   background: rgba(255, 255, 255, 0.92);
   border-radius: 8px;
-  padding: 8px;
+  padding: 8px 12px;
 }
 
-.anotados-chip.is-zero { opacity: 0.55; }
-
-.anotados-chip.is-regimen {
-  background: #e8f5e9;
-  outline: 2px solid #2e7d32;
+.fila.is-pendiente {
+  background: #fff;
+  outline: 2px dashed #8d6e63;
 }
 
-.anotados-chip strong {
-  display: block;
-  font-size: 24px;
+.fila-nombre {
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.fila-cifra {
+  font-size: 22px;
   line-height: 1;
+  text-align: right;
 }
 
-.anotados-chip span {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
+.fila-cifra .mas-r {
+  font-size: inherit;
+  font-weight: inherit;
+  color: #1b5e20;
 }
 
 .anotados-detalle {
@@ -197,28 +202,45 @@ button { font: inherit; cursor: pointer; }
   border-top: 1px dashed rgba(0, 0, 0, 0.18);
 }
 
-.anotados-detalle h3 {
-  margin: 0 0 8px;
+.anotados-detalle summary {
+  margin: 0;
+  padding: 4px 0;
   font-size: 12px;
+  font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
 }
 
-.anotados-bloque { margin-bottom: 8px; }
-
-.anotados-bloque h4 {
-  margin: 0 0 4px;
-  font-size: 14px;
+.anotados-detalle summary::-webkit-details-marker {
+  display: none;
 }
 
-.anotados-bloque h4 small {
-  font-weight: 400;
-  color: var(--muted);
+.anotados-detalle summary::before {
+  content: "›";
+  display: inline-block;
+  font-size: 16px;
+  line-height: 1;
+  transform-origin: center;
+  transition: transform 0.15s ease;
 }
 
-.anotados-comida.almuerzo .anotados-bloque h4 { color: #1b5e20; }
-.anotados-comida.cena .anotados-bloque h4 { color: #bf360c; }
+.anotados-detalle[open] summary::before {
+  transform: rotate(90deg);
+}
+
+.anotados-detalle-cuerpo {
+  margin-top: 8px;
+}
+
+.anotados-comida.almuerzo .fila-nombre { color: #1b5e20; }
+.anotados-comida.cena .fila-nombre { color: #bf360c; }
 
 .anotados-lista {
   list-style: none;
@@ -226,15 +248,23 @@ button { font: inherit; cursor: pointer; }
   padding: 0;
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
 }
 
 .anotados-lista li {
-  background: rgba(255, 255, 255, 0.92);
+  background: #fff8f3;
+  border: 1px solid var(--border);
   border-radius: 999px;
   padding: 4px 10px;
   font-size: 15px;
   font-weight: 700;
+}
+
+.anotados-lista.is-pendiente li {
+  font-weight: 600;
+  color: #6d4c41;
+  background: rgba(255, 255, 255, 0.55);
 }
 
 .anotados-lista .tag {

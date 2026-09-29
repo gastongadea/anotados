@@ -44,7 +44,20 @@ module.exports = async function handler(req, res) {
         AND opcion <> ''
       ORDER BY fecha, comida, iniciales
     `;
-    return res.status(200).json({ success: true, rows });
+    let estados = {};
+    try {
+      const estadoRows = await db`
+        SELECT iniciales, estado
+        FROM comensales_estado
+      `;
+      estadoRows.forEach((row) => {
+        estados[row.iniciales] = row.estado;
+      });
+    } catch (error) {
+      if (!/comensales_estado/i.test(String(error.message || ''))) throw error;
+      estados = {};
+    }
+    return res.status(200).json({ success: true, rows, estados });
   } catch (error) {
     console.error('anotados:', error);
     return res.status(500).json({ success: false, error: error.message });

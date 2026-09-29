@@ -48,6 +48,7 @@
   const state = {
     fecha: dias.includes(location.hash.slice(1)) ? location.hash.slice(1) : hoy,
     filas: [],
+    inactivos: new Set(),
     cargando: false,
     error: '',
   };
@@ -67,11 +68,20 @@
     return `${SEMANA_CORTA[d.getDay()]} ${ddmm(d)}`;
   }
 
-  function chips(items, extra) {
-    return `<div class="anotados-chips">${items.map((it) => `
-      <div class="anotados-chip${extra ? ` ${extra}` : ''}${it.total ? '' : ' is-zero'}">
-        <strong>${it.total}</strong>
-        <span>${escapeHtml(it.label)}</span>
+  function cifra(it, separarRegimen) {
+    if (!separarRegimen) return String(it.total);
+    const { sinR, conR } = Clasificacion.partesRegimen(it);
+    if (conR > 0 && sinR > 0) return `${sinR}<span class="mas-r"> + ${conR}R</span>`;
+    if (conR > 0) return `${conR}<span class="mas-r">R</span>`;
+    return String(sinR);
+  }
+
+  function filas(items, extra, separarRegimen) {
+    if (!items.length) return '';
+    return `<div class="anotados-filas">${items.map((it) => `
+      <div class="fila${extra ? ` ${extra}` : ''}">
+        <span class="fila-nombre">${escapeHtml(it.label)}</span>
+        <strong class="fila-cifra">${cifra(it, separarRegimen)}</strong>
       </div>`).join('')}</div>`;
   }
 
@@ -85,26 +95,35 @@
   }
 
   function detalle(r) {
-    const grupos = [...r.horarios, ...r.formatos, ...(r.otro ? [r.otro] : [])]
-      .filter((g) => g.personas.length);
+    const grupos = [
+      ...r.formatos,
+      ...r.horarios,
+      ...(r.otro ? [r.otro] : []),
+      ...(r.sinAnotar ? [r.sinAnotar] : []),
+    ].filter((g) => g.personas.length);
     if (!grupos.length) return '<p class="anotados-vacio">Nadie anotado</p>';
-    return `<div class="anotados-detalle">
-      <h3>Detalle</h3>
-      ${grupos.map((g) => `
-        <div class="anotados-bloque">
-          <h4>${escapeHtml(g.label)} <small>${g.total}</small></h4>
-          <ul class="anotados-lista">${g.personas.map(persona).join('')}</ul>
-        </div>`).join('')}
-    </div>`;
+    return `<details class="anotados-detalle">
+      <summary>Detalle</summary>
+      <div class="anotados-detalle-cuerpo">
+        ${grupos.map((g) => `
+          <div class="fila${g.id === 'sinAnotar' ? ' is-pendiente' : ''}">
+            <span class="fila-nombre">${escapeHtml(g.label)}</span>
+            <ul class="anotados-lista">${g.personas.map(persona).join('')}</ul>
+          </div>`).join('')}
+      </div>
+    </details>`;
   }
 
   function comida(titulo, clase, r) {
+    const casa = r.horarios.length
+      ? `<div class="anotados-grupo"><p>En casa</p>${filas(r.horarios, '', true)}</div>`
+      : '';
     return `<section class="anotados-comida ${clase}">
       <h2><span>${titulo}</span><b>${r.total}</b></h2>
-      <div class="anotados-grupo"><p>Horario</p>${chips(r.horarios)}</div>
-      <div class="anotados-grupo"><p>Régimen</p>${chips([r.regimen], 'is-regimen')}</div>
-      <div class="anotados-grupo"><p>Sandwich o viandas</p>${chips(r.formatos)}</div>
-      ${r.otro ? `<div class="anotados-grupo"><p>Otro</p>${chips([r.otro])}</div>` : ''}
+      ${filas(r.formatos, '', true)}
+      ${casa}
+      ${r.otro ? filas([r.otro], '', true) : ''}
+      ${r.sinAnotar ? filas([r.sinAnotar], 'is-pendiente') : ''}
       ${detalle(r)}
     </section>`;
   }
@@ -134,8 +153,8 @@
 
     const delDia = state.filas.filter((f) => f.fecha === state.fecha);
     els.contenido.innerHTML =
-      comida('Almuerzo', 'almuerzo', Clasificacion.resumirComida(delDia, 'Almuerzo')) +
-      comida('Cena', 'cena', Clasificacion.resumirComida(delDia, 'Cena'));
+      comida('Almuerzo', 'almuerzo', Clasificacion.resumirComida(delDia, 'Almuerzo', state.inactivos)) +
+      comida('Cena', 'cena', Clasificacion.resumirComida(delDia, 'Cena', state.inactivos));
   }
 
   function irA(iso) {
@@ -155,6 +174,11 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.success === false) throw new Error(data.error || `Error ${res.status}`);
       state.filas = data.rows || [];
+      state.inactivos = new Set(
+        Object.entries(data.estados || {})
+          .filter(([, estado]) => estado === 'inactivo' || estado === 'oculto')
+          .map(([ini]) => ini.toUpperCase())
+      );
     } catch (e) {
       state.error = `No se pudieron cargar los anotados: ${e.message}`;
     } finally {

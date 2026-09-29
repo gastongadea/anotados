@@ -38,7 +38,7 @@
   }
 
   const GRUPOS = {
-    normal: { label: 'Horario normal', tipo: 'horario' },
+    normal: { label: 'Normal', tipo: 'horario' },
     '12': { label: '12:00', tipo: 'horario' },
     '1230': { label: '12:30', tipo: 'horario' },
     tarde: { label: 'Tarde', tipo: 'horario' },
@@ -50,16 +50,23 @@
 
   const VISIBLES = {
     Almuerzo: {
-      horario: ['normal', '12', '1230', 'tarde'],
-      formato: ['sandwich', 'vianda'],
+      horario: ['12', '1230', 'normal', 'tarde'],
+      formato: ['vianda', 'viandaManana', 'sandwich'],
     },
     Cena: {
-      horario: ['normal', 'tarde'],
-      formato: ['sandwich', 'vianda', 'viandaManana'],
+      horario: ['12', '1230', 'normal', 'tarde'],
+      formato: ['vianda', 'viandaManana', 'sandwich'],
     },
   };
 
-  function resumirComida(filas, comida) {
+  /** Misma lista que Limos. Activo es el estado por defecto; Invitados y Plan no son una persona. */
+  const ACTIVOS = [
+    'MEP', 'GG', 'IJC', 'MMR', 'LMC', 'PAB', 'JBA', 'IC', 'ELF', 'FIG', 'AS',
+    'FAM', 'JOA', 'FMA', 'JPS', 'FEC', 'TA', 'GGP', 'H1', 'H2',
+  ];
+
+  function resumirComida(filas, comida, inactivos) {
+    const fuera = inactivos instanceof Set ? inactivos : new Set(inactivos || []);
     const grupos = {};
     Object.keys(GRUPOS).forEach((id) => {
       grupos[id] = { id, label: GRUPOS[id].label, total: 0, personas: [] };
@@ -96,14 +103,50 @@
         (id) => GRUPOS[id].tipo === tipo && !vis[tipo].includes(id) && grupos[id].total > 0
       );
 
-    const horarios = vis.horario.concat(conDatos('horario')).map((id) => grupos[id]);
-    const formatos = vis.formato.concat(conDatos('formato')).map((id) => grupos[id]);
+    const soloConGente = (ids) => ids.filter((id) => grupos[id].total > 0).map((id) => grupos[id]);
+    const horarios = soloConGente(vis.horario.concat(conDatos('horario')));
+    const formatos = soloConGente(vis.formato.concat(conDatos('formato')));
     const otro = grupos.otro.total > 0 ? grupos.otro : null;
     const total = Object.values(grupos).reduce((s, g) => s + g.total, 0);
 
-    return { total, horarios, formatos, regimen, otro };
+    const respondieron = new Set();
+    filas.forEach((fila) => {
+      if (fila.comida !== comida) return;
+      const iniciales = String(fila.iniciales || '').trim();
+      if (!iniciales || !normalizarOpcion(fila.opcion)) return;
+      respondieron.add(iniciales.toUpperCase());
+    });
+    const sinAnotar = {
+      id: 'sinAnotar',
+      label: 'Sin anotar',
+      total: 0,
+      personas: ACTIVOS
+        .filter((ini) => !fuera.has(ini.toUpperCase()) && !respondieron.has(ini.toUpperCase()))
+        .map((iniciales) => ({ iniciales, cantidad: 1, regimen: false })),
+    };
+    sinAnotar.total = sinAnotar.personas.length;
+
+    return {
+      total,
+      horarios,
+      formatos,
+      regimen: regimen.total > 0 ? regimen : null,
+      otro,
+      sinAnotar: sinAnotar.total > 0 ? sinAnotar : null,
+    };
   }
 
-  global.Clasificacion = { normalizarOpcion, clasificarOpcion, resumirComida };
+  function partesRegimen(grupo) {
+    let sinR = 0;
+    let conR = 0;
+    (grupo.personas || []).forEach((p) => {
+      const n = p.cantidad || 1;
+      if (p.regimen) conR += n;
+      else sinR += n;
+    });
+    return { sinR, conR };
+  }
+
+  global.Clasificacion = { normalizarOpcion, clasificarOpcion, resumirComida, partesRegimen };
   if (typeof module !== 'undefined') module.exports = global.Clasificacion;
 })(typeof window !== 'undefined' ? window : globalThis);
