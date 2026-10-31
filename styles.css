@@ -94,14 +94,29 @@ button { font: inherit; cursor: pointer; }
   scrollbar-width: thin;
 }
 
-.anotados-dias button {
+.dia-col {
   flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.anotados-dias button {
   border: 1px solid var(--border);
   background: white;
   color: var(--text);
   border-radius: 999px;
   padding: 6px 12px;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.dia-misa {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  line-height: 1;
 }
 
 .anotados-dias button.is-active {
@@ -283,4 +298,12 @@ button { font: inherit; cursor: pointer; }
   font-style: italic;
   color: #666;
   font-size: 14px;
+}
+
+.anotados-cumples {
+  margin: 2px 4px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.45;
 }

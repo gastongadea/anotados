@@ -49,6 +49,8 @@
     fecha: dias.includes(location.hash.slice(1)) ? location.hash.slice(1) : hoy,
     filas: [],
     inactivos: new Set(),
+    misas: null,
+    cumples: [],
     cargando: false,
     error: '',
   };
@@ -136,9 +138,12 @@
     els.prev.disabled = idx <= 0;
     els.next.disabled = idx >= dias.length - 1;
 
-    els.dias.innerHTML = dias.map((iso) =>
-      `<button type="button" data-dia="${iso}" class="${iso === state.fecha ? 'is-active' : ''}">${etiquetaChipDia(iso)}</button>`
-    ).join('');
+    els.dias.innerHTML = dias.map((iso) => {
+      const misa = iso === dias[0]
+        ? 'Misa'
+        : (state.misas ? (state.misas[iso] === 'Si' ? 'Si' : 'No') : '');
+      return `<div class="dia-col"><button type="button" data-dia="${iso}" class="${iso === state.fecha ? 'is-active' : ''}">${etiquetaChipDia(iso)}</button>${misa ? `<span class="dia-misa">${misa}</span>` : ''}</div>`;
+    }).join('');
     const activo = els.dias.querySelector('.is-active');
     if (activo) activo.scrollIntoView({ block: 'nearest', inline: 'center' });
 
@@ -152,9 +157,13 @@
     }
 
     const delDia = state.filas.filter((f) => f.fecha === state.fecha);
+    const leyenda = state.cumples.length
+      ? `<p class="anotados-cumples">Próximos cumpleaños: ${state.cumples.map((c) => `${escapeHtml(c.fecha)} (${escapeHtml(c.iniciales)})`).join(', ')}</p>`
+      : '';
     els.contenido.innerHTML =
       comida('Almuerzo', 'almuerzo', Clasificacion.resumirComida(delDia, 'Almuerzo', state.inactivos)) +
-      comida('Cena', 'cena', Clasificacion.resumirComida(delDia, 'Cena', state.inactivos));
+      comida('Cena', 'cena', Clasificacion.resumirComida(delDia, 'Cena', state.inactivos)) +
+      leyenda;
   }
 
   function irA(iso) {
@@ -174,6 +183,8 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok || data.success === false) throw new Error(data.error || `Error ${res.status}`);
       state.filas = data.rows || [];
+      state.misas = data.misas || {};
+      state.cumples = data.cumpleanos || [];
       state.inactivos = new Set(
         Object.entries(data.estados || {})
           .filter(([, estado]) => estado === 'inactivo' || estado === 'oculto')
